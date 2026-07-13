@@ -36,7 +36,7 @@ MiddleButtonScrollFilter::Filter(BMessage* message, BList* outList)
 
 	if (message->what == B_MOUSE_UP) {
 		fScrolling = false;
-		return B_SKIP_MESSAGE;
+		return B_DISPATCH_MESSAGE;
 	}
 
 	int32 buttons;
@@ -57,7 +57,7 @@ MiddleButtonScrollFilter::Filter(BMessage* message, BList* outList)
 
 		fScrolling = true;
 		fPreviousMousePosition = mousePosition;
-		return B_SKIP_MESSAGE;
+		return B_DISPATCH_MESSAGE;
 	}
 
 	if (!fScrolling)
@@ -69,20 +69,20 @@ MiddleButtonScrollFilter::Filter(BMessage* message, BList* outList)
 
 	if ((buttons & B_TERTIARY_MOUSE_BUTTON) == 0) {
 		fScrolling = false;
-		return B_SKIP_MESSAGE;
+		return B_DISPATCH_MESSAGE;
 	}
 
 	float deltaX = (mousePosition.x - fPreviousMousePosition.x) * kScrollScale;
 	float deltaY = (mousePosition.y - fPreviousMousePosition.y) * kScrollScale;
 	fPreviousMousePosition = mousePosition;
 	if (deltaX == 0.0f && deltaY == 0.0f)
-		return B_SKIP_MESSAGE;
+		return B_DISPATCH_MESSAGE;
 
 	BMessage* wheelMessage = new BMessage(B_MOUSE_WHEEL_CHANGED);
 	wheelMessage->AddFloat("be:wheel_delta_x", deltaX);
 	wheelMessage->AddFloat("be:wheel_delta_y", deltaY);
 	outList->AddItem(wheelMessage);
-	return B_SKIP_MESSAGE;
+	return B_DISPATCH_MESSAGE;
 }
 
 extern "C" BInputServerFilter*
