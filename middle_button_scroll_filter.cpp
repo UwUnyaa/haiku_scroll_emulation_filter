@@ -8,6 +8,7 @@ class MiddleButtonScrollFilter : public BInputServerFilter {
 private:
 	bool fScrolling;
 	BPoint fPreviousMousePosition;
+	static constexpr float kScrollScale = 1.0f;
 
 public:
 	MiddleButtonScrollFilter();
@@ -71,15 +72,13 @@ MiddleButtonScrollFilter::Filter(BMessage* message, BList* outList)
 		return B_SKIP_MESSAGE;
 	}
 
-	float deltaX = mousePosition.x - fPreviousMousePosition.x;
-	float deltaY = mousePosition.y - fPreviousMousePosition.y;
+	float deltaX = (mousePosition.x - fPreviousMousePosition.x) * kScrollScale;
+	float deltaY = (mousePosition.y - fPreviousMousePosition.y) * kScrollScale;
 	fPreviousMousePosition = mousePosition;
+	if (deltaX == 0.0f && deltaY == 0.0f)
+		return B_SKIP_MESSAGE;
 
-	BMessage* wheelMessage = new BMessage(*message);
-	wheelMessage->what = B_MOUSE_WHEEL_CHANGED;
-	wheelMessage->RemoveName("buttons");
-	wheelMessage->RemoveName("clicks");
-	wheelMessage->RemoveName("transit");
+	BMessage* wheelMessage = new BMessage(B_MOUSE_WHEEL_CHANGED);
 	wheelMessage->AddFloat("be:wheel_delta_x", deltaX);
 	wheelMessage->AddFloat("be:wheel_delta_y", deltaY);
 	outList->AddItem(wheelMessage);
