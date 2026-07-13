@@ -9,8 +9,9 @@ private:
 	bool fScrolling;
 	bool fMiddleButtonPressed;
 	BPoint fPreviousMousePosition;
-	static constexpr float kScrollScale = 1.0f;
 	static constexpr float kScrollThreshold = 1.0f;
+	float fAccumulatedDeltaX;
+	float fAccumulatedDeltaY;
 
 public:
 	MiddleButtonScrollFilter();
@@ -21,6 +22,8 @@ public:
 MiddleButtonScrollFilter::MiddleButtonScrollFilter()
 	:	fScrolling(false)
 	,	fMiddleButtonPressed(false)
+	,	fAccumulatedDeltaX(0.0f)
+	,	fAccumulatedDeltaY(0.0f)
 {
 }
 
@@ -38,13 +41,20 @@ MiddleButtonScrollFilter::Filter(BMessage* message, BList* outList)
 		return B_DISPATCH_MESSAGE;
 
 	if (message->what == B_MOUSE_UP) {
-		if (fMiddleButtonPressed) {
+		int32 buttons = 0;
+		message->FindInt32("buttons", &buttons);
+
+		if (fMiddleButtonPressed && (buttons & B_TERTIARY_MOUSE_BUTTON) == 0) {
 			fMiddleButtonPressed = false;
 			fScrolling = false;
+			fAccumulatedDeltaX = 0.0f;
+			fAccumulatedDeltaY = 0.0f;
 			return B_SKIP_MESSAGE;
 		}
 
-		fScrolling = false;
+		if (!fMiddleButtonPressed)
+			fScrolling = false;
+
 		return B_DISPATCH_MESSAGE;
 	}
 
@@ -58,6 +68,8 @@ MiddleButtonScrollFilter::Filter(BMessage* message, BList* outList)
 		if ((buttons & B_TERTIARY_MOUSE_BUTTON) == 0) {
 			fScrolling = false;
 			fMiddleButtonPressed = false;
+			fAccumulatedDeltaX = 0.0f;
+			fAccumulatedDeltaY = 0.0f;
 			return B_DISPATCH_MESSAGE;
 		}
 
@@ -68,6 +80,8 @@ MiddleButtonScrollFilter::Filter(BMessage* message, BList* outList)
 		fMiddleButtonPressed = true;
 		fScrolling = true;
 		fPreviousMousePosition = mousePosition;
+		fAccumulatedDeltaX = 0.0f;
+		fAccumulatedDeltaY = 0.0f;
 		return B_SKIP_MESSAGE;
 	}
 
@@ -81,21 +95,31 @@ MiddleButtonScrollFilter::Filter(BMessage* message, BList* outList)
 	if ((buttons & B_TERTIARY_MOUSE_BUTTON) == 0) {
 		fScrolling = false;
 		fMiddleButtonPressed = false;
+		fAccumulatedDeltaX = 0.0f;
+		fAccumulatedDeltaY = 0.0f;
 		return B_DISPATCH_MESSAGE;
 	}
 
-	float deltaX = (mousePosition.x - fPreviousMousePosition.x) * kScrollScale;
-	float deltaY = (mousePosition.y - fPreviousMousePosition.y) * kScrollScale;
+	float deltaX = mousePosition.x - fPreviousMousePosition.x;
+	float deltaY = mousePosition.y - fPreviousMousePosition.y;
 	fPreviousMousePosition = mousePosition;
-	if (deltaX > -kScrollThreshold && deltaX < kScrollThreshold
-		&& deltaY > -kScrollThreshold && deltaY < kScrollThreshold)
-		return B_DISPATCH_MESSAGE;
+	fAccumulatedDeltaX += deltaX;
+	fAccumulatedDeltaY += deltaY;
 
-	BMessage* wheelMessage = new BMessage(B_MOUSE_WHEEL_CHANGED);
-	wheelMessage->AddFloat("be:wheel_delta_x", deltaX);
-	wheelMessage->AddFloat("be:wheel_delta_y", deltaY);
+	if (fAccumulatedDeltaX > -kScrollThreshold && fAccumulatedDeltaX < kScrollThreshold
+		&& fAccumulatedDeltaY > -kScrollThreshold && fAccumulatedDeltaY < kScrollThreshold)
+		return B_SKIP_MESSAGE;
+
+	BMessage* wheelMessage = new(std::nothrow) BMessage(B_MOUSE_WHEEL_CHANGED);
+	if (wheelMessage == NULL)
+		return B_SKIP_MESSAGE;
+
+	wheelMessage->AddFloat("be:wheel_delta_x", fAccumulatedDeltaX);
+	wheelMessage->AddFloat("be:wheel_delta_y", fAccumulatedDeltaY);
+	fAccumulatedDeltaX = 0.0f;
+	fAccumulatedDeltaY = 0.0f;
 	outList->AddItem(wheelMessage);
-	return B_DISPATCH_MESSAGE;
+	return B_SKIP_MESSAGE;
 }
 
 extern "C" BInputServerFilter*
