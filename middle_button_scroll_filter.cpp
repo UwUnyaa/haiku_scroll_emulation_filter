@@ -7,8 +7,10 @@
 class MiddleButtonScrollFilter : public BInputServerFilter {
 private:
 	bool fScrolling;
+	bool fMiddleButtonPressed;
 	BPoint fPreviousMousePosition;
 	static constexpr float kScrollScale = 1.0f;
+	static constexpr float kScrollThreshold = 1.0f;
 
 public:
 	MiddleButtonScrollFilter();
@@ -18,6 +20,7 @@ public:
 
 MiddleButtonScrollFilter::MiddleButtonScrollFilter()
 	:	fScrolling(false)
+	,	fMiddleButtonPressed(false)
 {
 }
 
@@ -35,6 +38,12 @@ MiddleButtonScrollFilter::Filter(BMessage* message, BList* outList)
 		return B_DISPATCH_MESSAGE;
 
 	if (message->what == B_MOUSE_UP) {
+		if (fMiddleButtonPressed) {
+			fMiddleButtonPressed = false;
+			fScrolling = false;
+			return B_SKIP_MESSAGE;
+		}
+
 		fScrolling = false;
 		return B_DISPATCH_MESSAGE;
 	}
@@ -46,8 +55,9 @@ MiddleButtonScrollFilter::Filter(BMessage* message, BList* outList)
 	}
 
 	if (message->what == B_MOUSE_DOWN) {
-		if (buttons != B_TERTIARY_MOUSE_BUTTON) {
+		if ((buttons & B_TERTIARY_MOUSE_BUTTON) == 0) {
 			fScrolling = false;
+			fMiddleButtonPressed = false;
 			return B_DISPATCH_MESSAGE;
 		}
 
@@ -55,9 +65,10 @@ MiddleButtonScrollFilter::Filter(BMessage* message, BList* outList)
 		if (message->FindPoint("where", &mousePosition) != B_OK)
 			return B_DISPATCH_MESSAGE;
 
+		fMiddleButtonPressed = true;
 		fScrolling = true;
 		fPreviousMousePosition = mousePosition;
-		return B_DISPATCH_MESSAGE;
+		return B_SKIP_MESSAGE;
 	}
 
 	if (!fScrolling)
@@ -69,13 +80,15 @@ MiddleButtonScrollFilter::Filter(BMessage* message, BList* outList)
 
 	if ((buttons & B_TERTIARY_MOUSE_BUTTON) == 0) {
 		fScrolling = false;
+		fMiddleButtonPressed = false;
 		return B_DISPATCH_MESSAGE;
 	}
 
 	float deltaX = (mousePosition.x - fPreviousMousePosition.x) * kScrollScale;
 	float deltaY = (mousePosition.y - fPreviousMousePosition.y) * kScrollScale;
 	fPreviousMousePosition = mousePosition;
-	if (deltaX == 0.0f && deltaY == 0.0f)
+	if (deltaX > -kScrollThreshold && deltaX < kScrollThreshold
+		&& deltaY > -kScrollThreshold && deltaY < kScrollThreshold)
 		return B_DISPATCH_MESSAGE;
 
 	BMessage* wheelMessage = new BMessage(B_MOUSE_WHEEL_CHANGED);
