@@ -1,4 +1,4 @@
-#+TITLE:+Experimental Haiku Input Filter
+#+TITLE: Experimental Haiku Input Filter
 
 This repository contains an experimental input filter for Haiku.
 
