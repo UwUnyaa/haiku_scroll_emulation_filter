@@ -91,10 +91,12 @@ MiddleButtonScrollFilter::Filter(BMessage* message, BList* outList)
 		&& deltaY > -kScrollThreshold && deltaY < kScrollThreshold)
 		return B_DISPATCH_MESSAGE;
 
-	BMessage* wheelMessage = new BMessage(B_MOUSE_WHEEL_CHANGED);
-	wheelMessage->AddFloat("be:wheel_delta_x", deltaX);
-	wheelMessage->AddFloat("be:wheel_delta_y", deltaY);
-	outList->AddItem(wheelMessage);
+	message->what = B_MOUSE_WHEEL_CHANGED;
+	message->AddFloat("be:wheel_delta_x", deltaX);
+	message->AddFloat("be:wheel_delta_y", deltaY);
+	message->RemoveName("buttons");
+	message->RemoveName("clicks");
+	message->RemoveName("transit");
 	return B_DISPATCH_MESSAGE;
 }
 
