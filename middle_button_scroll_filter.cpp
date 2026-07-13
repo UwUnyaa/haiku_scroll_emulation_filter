@@ -1,6 +1,7 @@
 #include <InputServerFilter.h>
 #include <Message.h>
 #include <Point.h>
+#include <View.h>
 #include <new>
 
 class MiddleButtonScrollFilter : public BInputServerFilter {
@@ -34,7 +35,7 @@ MiddleButtonScrollFilter::Filter(BMessage* message, BList* outList)
 
 	if (message->what == B_MOUSE_UP) {
 		fScrolling = false;
-		return B_DISPATCH_MESSAGE;
+		return B_SKIP_MESSAGE;
 	}
 
 	int32 buttons;
@@ -55,7 +56,7 @@ MiddleButtonScrollFilter::Filter(BMessage* message, BList* outList)
 
 		fScrolling = true;
 		fPreviousMousePosition = mousePosition;
-		return B_DISPATCH_MESSAGE;
+		return B_SKIP_MESSAGE;
 	}
 
 	if (!fScrolling)
@@ -67,21 +68,22 @@ MiddleButtonScrollFilter::Filter(BMessage* message, BList* outList)
 
 	if ((buttons & B_TERTIARY_MOUSE_BUTTON) == 0) {
 		fScrolling = false;
-		return B_DISPATCH_MESSAGE;
+		return B_SKIP_MESSAGE;
 	}
 
 	float deltaX = mousePosition.x - fPreviousMousePosition.x;
 	float deltaY = mousePosition.y - fPreviousMousePosition.y;
 	fPreviousMousePosition = mousePosition;
 
-	message->what = B_MOUSE_WHEEL_CHANGED;
-	message->RemoveName("buttons");
-	message->RemoveName("clicks");
-	message->RemoveName("transit");
-	message->RemoveName("be:screen_where");
-	message->AddFloat("be:wheel_delta_x", deltaX);
-	message->AddFloat("be:wheel_delta_y", deltaY);
-	return B_DISPATCH_MESSAGE;
+	BMessage* wheelMessage = new BMessage(*message);
+	wheelMessage->what = B_MOUSE_WHEEL_CHANGED;
+	wheelMessage->RemoveName("buttons");
+	wheelMessage->RemoveName("clicks");
+	wheelMessage->RemoveName("transit");
+	wheelMessage->AddFloat("be:wheel_delta_x", deltaX);
+	wheelMessage->AddFloat("be:wheel_delta_y", deltaY);
+	outList->AddItem(wheelMessage);
+	return B_SKIP_MESSAGE;
 }
 
 extern "C" BInputServerFilter*
