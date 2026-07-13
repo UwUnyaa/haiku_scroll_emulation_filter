@@ -1,0 +1,7 @@
+#+TITLE:+Experimental Haiku Input Filter
+
+This repository contains an experimental input filter for Haiku.
+
+It currently focuses on middle-button drag scroll emulation.
+
+The project is licensed under the GNU GPLv3 or later.
