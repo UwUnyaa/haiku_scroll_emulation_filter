@@ -4,4 +4,6 @@ This repository contains an experimental input filter for Haiku.
 
 It currently focuses on middle-button drag scroll emulation.
 
+It also includes a Caps Lock to Control remap filter.
+
 The project is licensed under the GNU GPLv3 or later.
